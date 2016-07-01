@@ -11,6 +11,11 @@ const int LED_GRABBER_POSITION_ONE = 4
 const int LED_GRABBER_POSITION_TWO = 5;
 const int LED_GRABBER_POSITION_THREE = 6;
 
+const int ENCODER_DIVIDER_01 = 100;
+const int ENCODER_DIVIDER_12 = 1000;
+const int ENCODER_DIVIDER_23 = 1200;
+
+
 class CustomPanelOutput{
   public:
     CustomPanel(Joystick *j);
@@ -62,7 +67,17 @@ void CustomPanelOutput::updateLighting(){
     case 1: launchpad->setOutput(LED_GRABBER_POSITION_ONE, true); break;
     case 2: launchpad->setOutput(LED_GRABBER_POSITION_TWO, true); break;
     case 3: launchpad->setOutput(LED_GRABBER_POSITION_THREE, true); break;
-    default: break;
+    default: 
+      if(grabberPosition > 0){
+        if(grabberPosition < ENCODER_DIVIDER_01)
+          launchpad->setOutput(LED_GRABBER_POSITION_ZERO, true);
+        else if(grabberPosition < ENCODER_DIVIDER_12)
+          launchpad->setOutput(LED_GRABBER_POSITION_ONE, true);
+        else if(grabberPosition < ENCODER_DIVIDER_23)
+          launchpad->setOutput(LED_GRABBER_POSITION_TWO, true);
+        else
+          launchpad->setOutput(LED_GRABBER_POSITION_THREE, true);
+      }
   }
   
   switch(climberPosition){
