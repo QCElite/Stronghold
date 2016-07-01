@@ -32,12 +32,14 @@ void CustomPanelOutput::setClimberPosition(int climb){
   if(climb >= -1 && climb <= 2){
     climberPosition = climb;
   }
+  updateLighting();
 }
 
 void CustomPanelOutput::setGrabberPosition(int grab){
   if(grab >= -1 && grab <= 3){
     grabberPosition = grab;
   }
+  updateLighting();
 }
 
 void CustomPanelOutput::blackout(){
