@@ -25,7 +25,8 @@ class Robot: public SampleRobot {
 	// Define Joystick Channels
 	const static int 	JOYSTICK_DRIVER			= 0;
 	const static int 	JOYSTICK_OPERATOR		= 1;
-
+	const static int	JOYSTICK_PANEL			= 3;
+	
 	// IDs for grabber Position
 	const static int	GRABBER_AUTO_LOWBAR		= 10;
 	const static int	GRABBER_MANUAL			= -1;
@@ -55,7 +56,8 @@ class Robot: public SampleRobot {
 	RobotDrive     		robotDrive;			// Robot drive system
 	Joystick        	joystick_driver;		// Joystick to control steering and drive
 	Joystick        	joystick_operator;		// Joystick to control arms and winches
-
+	Joystick		joystick_panel;
+	
 	DigitalInput		digitalbit1;			// digital bit 1 from option switch
 	DigitalInput		digitalbit2;			// digital bit 2 from option switch
 	DigitalInput		digitalbit4;			// digital bit 4 from option switch
@@ -76,7 +78,7 @@ class Robot: public SampleRobot {
 	int			arm_target;			// Target arm position
 
 	preset current;
-
+	CustomPanelOutput panel;
 
 public:
 	Robot() :
@@ -87,6 +89,7 @@ public:
 		robotDrive(MOTOR_FRONT_LEFT, MOTOR_REAR_LEFT, MOTOR_FRONT_RIGHT, MOTOR_REAR_RIGHT),
 		joystick_driver(JOYSTICK_DRIVER),						
 		joystick_operator(JOYSTICK_OPERATOR),			
+		joystick_panel(JOYSTICK_PANEL),
 		digitalbit1(1),
 		digitalbit2(2),
 		digitalbit4(3),
@@ -101,7 +104,9 @@ public:
 		armPosition(5,6,false,Encoder::EncodingType::k4X)
 	
 	{
-	
+		panel = CustomPanelOutput(&joystick_panel);
+		panel.updateLighting();
+		
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(RobotDrive::kFrontLeftMotor, true);	// invert the left side motors
 		robotDrive.SetInvertedMotor(RobotDrive::kRearLeftMotor, true);	// you may need to change or remove this to match your robot
@@ -390,32 +395,42 @@ public:
 		switch(pos){
 			case GRABBER_FULLY_RETRACTED:
 				runGrabberTowardsLimit(LIMIT_GRABBER_RETRACTED);
+				panel.setGrabberPosition(0);
 				break;
 			case GRABBER_SHOOT_LOAD:
 				runGrabberTowardsEncoder(ENCODER_POS_SHOOT, 25);
+				panel.setGrabberPosition(2);
 				break;
 			case GRABBER_VERTICAL:
 				runGrabberTowardsEncoder(ENCODER_POS_VERTICAL, 25);
+				panel.setGrabberPosition(1);
 				break;
 			case GRABBER_GRAB:
 				runGrabberTowardsEncoder(ENCODER_POS_GRAB, 25);
+				panel.setGrabberPosition(3);
 				break;
 			case GRABBER_PORTCULLIS_HIGH:
 				runGrabberTowardsEncoder(ENCODER_POS_PORTHIGH, 25);
+				panel.setGrabberPosition(2);
 				break;
 			case GRABBER_PORTCULLIS_LOW:
 				runGrabberTowardsEncoder(ENCODER_POS_PORTLOW, 25);
+				panel.setGrabberPosition(3);
 				break;
 			case GRABBER_CHEVAL:
 				runGrabberTowardsEncoder(ENCODER_POS_CHEVAL, 25);
+				panel.setGrabberPosition(3);
 				break;
 			case GRABBER_AUTO_LOWBAR:
 				runGrabberTowardsEncoder(ENCODER_POS_AUTO_LOWBAR, 25);
+				panel.setGrabberPosition(3);
 				break;
 			case GRABBER_MANUAL:
+				panel.setGrabberPosition(armPosition.Get());
 				break;
 			default:
 				runGrabberTowardsLimit(LIMIT_GRABBER_RETRACTED);
+				panel.setGrabberPosition(0);
 		}
 	}
 	
