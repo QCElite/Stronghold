@@ -19,15 +19,14 @@ struct preset{
 	bool 	winch;
 };
 
-preset startPosition;
-preset lowBar;
-
 class CustomPanelOutput{
   public:
-    CustomPanel(Joystick *j);
+	CustomPanelOutput();
+    CustomPanelOutput(Joystick *j);
     void setClimberPosition(int climberPosition);
     void setGrabberPosition(int grabberPosition);
     void updateLighting();
+    void blackout();
   protected:
     Joystick *launchpad;
     int climberPosition;

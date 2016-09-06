@@ -1,6 +1,6 @@
 #include "WPILib.h"
 #include "RobotDrive.h"
-#include "preset.h"
+#include "qcelite.h"
 
 /*
  * FRC Code for FIRST Stronghold 2016 by QC Elite, Team 648
@@ -18,37 +18,37 @@ class Robot: public SampleRobot {
 	// Other Motor Channels
 	const static int 	MOTOR_ROLLER 			= 8;   // BaneBots Motor to control intake axle
 	const static int 	MOTOR_GRABBER 			= 6;   // AndyMark Motor to change angle of intake arm
-	const static int	MOTOR_WINCH			= 7;   // CIM Motor to pull hook
+	const static int	MOTOR_WINCH				= 7;   // CIM Motor to pull hook
 	const static int	MOTOR_HOOK_ANGLE		= 4;   // Window Motor(?) to control climb arm angle
 	const static int	MOTOR_HOOK_SLIDE		= 5;   // Window Motor(?) to control climb arm telescoping action
 
 	// Define Joystick Channels
 	const static int 	JOYSTICK_DRIVER			= 0;
 	const static int 	JOYSTICK_OPERATOR		= 1;
-	const static int	JOYSTICK_PANEL			= 3;
+	const static int	JOYSTICK_PANEL			= 2;
 	
 	// IDs for grabber Position
 	const static int	GRABBER_AUTO_LOWBAR		= 10;
 	const static int	GRABBER_MANUAL			= -1;
-	const static int 	GRABBER_FULLY_RETRACTED 	= 0;
+	const static int 	GRABBER_FULLY_RETRACTED = 0;
 	const static int	GRABBER_VERTICAL		= 1;
 	const static int 	GRABBER_SHOOT_LOAD 		= 2;
 	const static int 	GRABBER_GRAB 			= 3;
-	const static int 	GRABBER_PORTCULLIS_HIGH 	= 4;
-	const static int 	GRABBER_PORTCULLIS_LOW 		= 5;
+	const static int 	GRABBER_PORTCULLIS_HIGH = 4;
+	const static int 	GRABBER_PORTCULLIS_LOW 	= 5;
 	const static int 	GRABBER_CHEVAL 			= 6;
 
 	// Constants for limits and encoders. All encoder numbers are made up. Don't trust them.
-	const static int 	LIMIT_GRABBER_RETRACTED 	= 0;
-	const static int 	LIMIT_GRABBER_EXTENDED 		= 1;   // If I remember correctly this was never actually added. Don't count on it. 
+	const static int 	LIMIT_GRABBER_RETRACTED = 0;
+	const static int 	LIMIT_GRABBER_EXTENDED 	= 1;   // If I remember correctly this was never actually added. Don't count on it.
 
-	const static int	ENCODER_POS_AUTO_LOWBAR  	= 1050;
+	const static int	ENCODER_POS_AUTO_LOWBAR = 1050;
 	
-	const static int	ENCODER_POS_VERTICAL		= 1000;
+	const static int	ENCODER_POS_VERTICAL	= 1000;
 	const static int 	ENCODER_POS_SHOOT 		= 1000;
 	const static int 	ENCODER_POS_GRAB 		= 1950;
-	const static int 	ENCODER_POS_PORTHIGH 		= 1200;
-	const static int 	ENCODER_POS_PORTLOW 		= 2050;
+	const static int 	ENCODER_POS_PORTHIGH 	= 1200;
+	const static int 	ENCODER_POS_PORTLOW 	= 2050;
 	const static int 	ENCODER_POS_CHEVAL		= 2050;
 
 
@@ -56,7 +56,7 @@ class Robot: public SampleRobot {
 	RobotDrive     		robotDrive;			// Robot drive system
 	Joystick        	joystick_driver;		// Joystick to control steering and drive
 	Joystick        	joystick_operator;		// Joystick to control arms and winches
-	Joystick		joystick_panel;
+	Joystick			joystick_panel;
 	
 	DigitalInput		digitalbit1;			// digital bit 1 from option switch
 	DigitalInput		digitalbit2;			// digital bit 2 from option switch
@@ -101,7 +101,8 @@ public:
 		winchMotor(MOTOR_WINCH),
 		hookAngle(MOTOR_HOOK_ANGLE),
 		hookSlide(MOTOR_HOOK_SLIDE),
-		armPosition(5,6,false,Encoder::EncodingType::k4X)
+		armPosition(5,6,false,Encoder::EncodingType::k4X),
+		panel(&joystick_panel)
 	
 	{
 		panel = CustomPanelOutput(&joystick_panel);
@@ -242,22 +243,22 @@ public:
 				
 			// If operator pulls trigger, move arm according to Y-Axis
 			if(joystick_operator.GetRawButton(1) && (joystick_operator.GetY() > 0.1 || joystick_operator.GetY() < -0.1)){
-				grabberMotor.Set(joystick_operator.GetY());
+				safeGrabberMotorSet(joystick_operator.GetY());
 				arm_target = GRABBER_MANUAL;
 			}else{
 				grabberMotor.Set(0.0);
 			}
 
 			// If holding buttons 4 or 5, pull in or spit out balls through roller.
-			if(joystick_operator.GetRawButton(4)){
+			if(joystick_operator.GetRawButton(4) || (imode_select == 9 && joystick_panel.GetRawButton(5))){
 				rollerMotor.Set(1.0);
-			}else if(joystick_operator.GetRawButton(5)){
+			}else if(joystick_operator.GetRawButton(5) || (imode_select == 9 && joystick_panel.GetRawButton(6))){
 				rollerMotor.Set(-1.0);
 			}else{
 				rollerMotor.Set(0.0);
 			}
 			
-			// If the opoerator pushes button 3 or 2 on their joystick, cycle to the next or previous grabber preset
+			// If the operator pushes button 3 or 2 on their joystick, cycle to the next or previous grabber preset
 			if(joystick_operator.GetRawButton(3)){
 				Wait(0.5);
 				nextArmPreset(true);
@@ -269,23 +270,23 @@ public:
 			// If the operator pushes button 6 or 7, raise or lower the hook angle
 			if(joystick_operator.GetRawButton(6)){
 				hookAngle.Set(1.0);
-			}else if(joystick_operator.GetRawButton(7)){
+			}else if(joystick_operator.GetRawButton(7) || (imode_select == 9 && joystick_panel.GetRawButton(1))){
 				hookAngle.Set(-1.0);
 			}else{
 				hookAngle.Set(0.0);
 			}
 			
-			// If the opperator pushes button 10 or 11, raise or lower the hook slide
-			if(joystick_operator.GetRawButton(11)){
+			// If the operator pushes button 10 or 11, raise or lower the hook slide
+			if(joystick_operator.GetRawButton(11) || (imode_select == 9 && joystick_panel.GetRawButton(2))){
 				hookSlide.Set(1.0);
-			}else if(joystick_operator.GetRawButton(10)){
+			}else if(joystick_operator.GetRawButton(12) || (imode_select == 9 && joystick_panel.GetRawButton(1))){
 				hookSlide.Set(-1.0);
 			}else{
 				hookSlide.Set(0.0);
 			}
 			
 			// If the operator pushes button 8 AND 9 (at the same time for safety), wind the winch
-			if(joystick_operator.GetRawButton(8) && joystick_operator.GetRawButton(9)){
+			if((joystick_operator.GetRawButton(8) && joystick_operator.GetRawButton(9)) || (imode_select == 9 && joystick_panel.GetRawButton(3))){
 				winchMotor.Set(-0.5);
 			}else{
 				winchMotor.Set(0.0);
@@ -293,8 +294,8 @@ public:
 			
 			
 			setGrabberPosition(arm_target);   // Every cycle, update the grabber position
-			printf("\nEncoder Values: %i", armPosition.Get());
-			printf("\nArm Target: %i", arm_target);
+			// printf("\nEncoder Values: %i", armPosition.Get());
+			// printf("\nArm Target: %i", arm_target);
 
 			Wait(0.005); // wait 5ms to avoid hogging CPU cycles
 		}
@@ -360,15 +361,15 @@ public:
 		switch(lim){
 			case LIMIT_GRABBER_RETRACTED:
 				if(!grabberInnerLimit.Get()){
-					grabberMotor.Set(0.5);
+					safeGrabberMotorSet(0.5);
 				}else{
 					armPosition.Reset();
-					grabberMotor.Set(0.0);
+					safeGrabberMotorSet(0.0);
 				}
 				break;
 			case LIMIT_GRABBER_EXTENDED:
 				if(grabberOuterLimit.Get()){
-					grabberMotor.Set(-0.5);
+					safeGrabberMotorSet(-0.5);
 				}else{
 				  grabberMotor.Set(0.0);
 				}
@@ -381,9 +382,9 @@ public:
 	// Set the grabber to run until within a reasonable margin of the target position
 	void runGrabberTowardsEncoder(int target, int margin){
 		if(armPosition.Get() - target > margin){
-			grabberMotor.Set(0.5);
+			safeGrabberMotorSet(0.5);
 		}else if(armPosition.Get() - target < -margin){
-			grabberMotor.Set(-0.5);
+			safeGrabberMotorSet(-0.5);
 		}else{
 			grabberMotor.Set(0.0);
 		}
@@ -432,8 +433,27 @@ public:
 				runGrabberTowardsLimit(LIMIT_GRABBER_RETRACTED);
 				panel.setGrabberPosition(0);
 		}
+
+		if(grabberInnerLimit.Get()){
+			printf("Limit is being triggered");
+		}
+
+		if(grabberMotor.Get() > 0 && !grabberInnerLimit.Get())
+			grabberMotor.Set(0.0);
+
 	}
-	
+
+	bool safeGrabberMotorSet(float value){
+		if(value > 0 && !grabberInnerLimit.Get()){
+			grabberMotor.Set(0.0);
+			return false;
+		}else{
+			grabberMotor.Set(value);
+			return true;
+		}
+	}
+
+
 
 	int subtract_fudge(int itmp1, int itmp2, int itmp3) {
 		int itmp4;
@@ -483,6 +503,11 @@ public:
 				break;
 			case	2:
 			break;
+			case	3:
+				definedDrive(1.0, 1.0);
+				if(grabberInnerLimit.Get())
+					printf("triggered");
+				printf("Well something should have happened...");
 			default:
 			printf("test mode, option out of range\n");
 
